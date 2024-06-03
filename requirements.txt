@@ -1,0 +1,13 @@
+https://github.com/learning-at-home/hivemind/archive/calm.zip
+pydantic==1.10.14
+bitsandbytes-cuda111==0.26.0.post2
+transformers==4.12.2
+tokenizers==0.10.3
+datasets==1.17.0
+torch_optimizer==0.1.0
+wandb==0.12.1
+nltk==3.6.7
+sentencepiece==0.1.96
+aiohttp==3.7.4.post0
+requests==2.25.1
+termcolor==1.1.0

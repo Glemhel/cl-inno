@@ -1,0 +1,7 @@
+**/__pycache__/
+/wandb/
+/logs/
+/outputs/
+/cache/
+/data/
+speedtest.json
