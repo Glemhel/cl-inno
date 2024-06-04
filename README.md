@@ -1,6 +1,6 @@
 # Collaborative Compressed Training of SOTA LLMs
 
-Run with `run_base_trainer.sh`.
+Run with `run_base_trainer.py`.
 
 Training task & models are defined in `tasks/lm/task.py`.
 
