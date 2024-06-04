@@ -20,7 +20,7 @@ from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArgume
 
 import multiprocessing as mp
 
-from .base_data import make_training_dataset#, SimpleDataCollator
+from .base_data import make_training_dataset
 
 hivemind.use_hivemind_log_handler("in_root_logger")
 logger = hivemind.get_logger()
