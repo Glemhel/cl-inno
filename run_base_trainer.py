@@ -9,7 +9,7 @@ from transformers import HfArgumentParser, Trainer
 
 import callback
 import utils
-from arguments import CollaborativeArguments, HFTrainerArguments, BasePeerArguments
+from arguments import CollaborativeArguments, HFTrainerArguments, BasePeerArguments, BitsAndBitesArguments
 from lib.training.hf_trainer import CollaborativeHFTrainer
 from tasks.lm.task import LMTrainingTask  # Assuming your LM training task is placed under tasks/lm/task
 
@@ -17,15 +17,15 @@ use_hivemind_log_handler("in_root_logger")
 logger = get_logger()
 
 def main():
-    parser = HfArgumentParser((BasePeerArguments, HFTrainerArguments, CollaborativeArguments))
-    peer_args, trainer_args, collab_args = parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser((BasePeerArguments, HFTrainerArguments, CollaborativeArguments, BitsAndBitesArguments))
+    peer_args, trainer_args, collab_args, bnb_args = parser.parse_args_into_dataclasses()
 
     logger.info(f"Trying {len(peer_args.initial_peers)} initial peers: {peer_args.initial_peers}")
     if len(peer_args.initial_peers) == 0:
         logger.warning("Specify at least one network endpoint in initial peers OR let others join your peer.")
 
     utils.setup_logging(trainer_args)
-    task = LMTrainingTask(peer_args, trainer_args, collab_args)
+    task = LMTrainingTask(peer_args, trainer_args, collab_args, bnb_args)
     model = task.model.to(trainer_args.device)
 
     # collaborative_callback = callback.CollaborativeCallback(task, peer_args)
