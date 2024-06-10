@@ -17,6 +17,8 @@ export INITIAL_PEERS=""
 
 ulimit -n 16384 # this line is important, ignoring it may cause Too Many Open Files
 
+export BANDWIDTH=`python -c "import json; speedtest = json.load(open('speedtest.json')); print(int(max(1, min(speedtest['upload'], speedtest['download']) / 1e6)))"`
+
 python run_base_trainer.py --run_id $EXP_NAME
   # --initial_peers $INITIAL_PEERS --bandwidth $BANDWIDTH \
 # you can tune per_device_train_batch_size, gradient_accumulation steps, --fp16, --gradient_checkpoints based on the device. A good rule of thumb is that the device should compute (batch size x num accumulations) gradients over 1-10 seconds. Setting very large gradient_accumulation_steps can cause your peer to miss an averaging round.
