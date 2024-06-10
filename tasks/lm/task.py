@@ -53,7 +53,6 @@ class LMTrainingTask:
         #     self.model = SimpleModelForPreTraining(self.config)
         # else:
         bnb_config = bnb_args.get_bnb_config()
-        print(bnb_config)
 
         self.model = AutoModelForCausalLM.from_pretrained('google/gemma-1.1-2b-it', quantization_config=bnb_config, device_map="auto")
 
@@ -176,6 +175,7 @@ class LMTrainingTask:
                     self.tokenizer,
                     max_sequence_length=self.trainer_args.max_sequence_length
                 )
+                self._training_dataset = load_from_disk('data/gemma_tokenized_wikitext')
         return self._training_dataset
 
 
