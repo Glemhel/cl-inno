@@ -1,8 +1,46 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import torch
 from transformers import TrainingArguments
+from transformers import BitsAndBytesConfig
+
+
+@dataclass
+class BitsAndBitesArguments:
+    """
+    Arguments for LMTrainingTask that are specific to BitsAndBites configuration
+    """
+
+    load_in_8bit: bool = field(default=False, metadata={"help": "Load the model in 8-bit precision"})
+    llm_int8_threshold: float = field(default=6.0, metadata={"help": "Outlier threshold for outlier detection"})
+    llm_int8_skip_modules: Optional[List[str]] = field(default=None, metadata={"help": "Modules to skip during quantization"})
+    llm_int8_enable_fp32_cpu_offload: bool = field(default=False, metadata={"help": "Enable FP32 CPU offload for quantization"})
+    llm_int8_has_fp16_weight: bool = field(default=False, metadata={"help": "Model has FP16 main weights"})
+
+    load_in_4bit: bool = field(default=True, metadata={"help": "Load the model in 4-bit precision"})
+    bnb_4bit_compute_dtype: str = field(default="bfloat16", metadata={"help": "Compute dtype for 4-bit quantization"})
+    bnb_4bit_quant_type: str = field(default="nf4", metadata={"help": "Quantization type for 4-bit quantization"})
+    bnb_4bit_use_double_quant: bool = field(default=True, metadata={"help": "Use double quantization for 4-bit quantization"})
+
+    def __post_init__(self):
+        if isinstance(self.bnb_4bit_compute_dtype, str):
+            self.bnb_4bit_compute_dtype = getattr(torch, self.bnb_4bit_compute_dtype)
+        if self.bnb_4bit_compute_dtype is None or not isinstance(self.bnb_4bit_compute_dtype, torch.dtype):
+            raise ValueError(f"Invalid dtype: {self.bnb_4bit_compute_dtype}")
+            
+    def get_bnb_config(self):
+        return BitsAndBytesConfig(
+            load_in_8bit=self.load_in_8bit,
+            llm_int8_threshold=self.llm_int8_threshold,
+            llm_int8_skip_modules=self.llm_int8_skip_modules,
+            llm_int8_enable_fp32_cpu_offload=self.llm_int8_enable_fp32_cpu_offload,
+            llm_int8_has_fp16_weight=self.llm_int8_has_fp16_weight,
+            load_in_4bit=self.load_in_4bit,
+            bnb_4bit_compute_dtype=self.bnb_4bit_compute_dtype,
+            bnb_4bit_quant_type=self.bnb_4bit_quant_type,
+            bnb_4bit_use_double_quant=self.bnb_4bit_use_double_quant,
+        )
 
 
 @dataclass
@@ -201,3 +239,4 @@ class AuxiliaryPeerArguments(BasePeerArguments):
         default=False, metadata={"help": "If True, this peer will facilitate averaging for other (training) peers"}
     )
     assist_refresh: float = field(default=1.0, metadata={"help": "Period (in seconds) for tryin to assist averaging"})
+

@@ -9,18 +9,19 @@ from datasets import load_from_disk
 import transformers
 from hivemind import Float16Compression, SizeAdaptiveCompression, Uniform8BitQuantization
 from torch.optim.lr_scheduler import LambdaLR
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 from transformers import GemmaTokenizer, DataCollatorForLanguageModeling
 from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
 
 import utils
-from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArguments
+from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArguments, BitsAndBitesArguments
 # from huggingface_auth import authorize_with_huggingface
 # from lib.models import SimpleModelConfig, SimpleModelForPreTraining
 
 import multiprocessing as mp
 
 from .base_data import make_training_dataset
+from .gemma_data import make_gemma_dataset
 
 hivemind.use_hivemind_log_handler("in_root_logger")
 logger = hivemind.get_logger()
@@ -32,13 +33,18 @@ class LMTrainingTask:
     _dht = _collaborative_optimizer = _training_dataset = _authorizer = None
 
     def __init__(
-        self, peer_args: BasePeerArguments, trainer_args: HFTrainerArguments, collab_args: CollaborativeArguments
+        self, peer_args: BasePeerArguments, trainer_args: HFTrainerArguments, 
+        collab_args: CollaborativeArguments, bnb_args: BitsAndBitesArguments
     ):
-        self.peer_args, self.trainer_args, self.collab_args = peer_args, trainer_args, collab_args
+        self.peer_args, self.trainer_args, self.collab_args, self.bnb_args = peer_args, trainer_args, collab_args, bnb_args
         transformers.set_seed(trainer_args.seed)
 
         self.validators, self.local_public_key = utils.make_validators(self.peer_args.run_id)
-        self.tokenizer = GemmaTokenizer.from_pretrained(peer_args.tokenizer_path, cache_dir=peer_args.cache_dir)
+        if os.path.exists(peer_args.tokenizer_path):
+            self.tokenizer = GemmaTokenizer.from_pretrained(peer_args.tokenizer_path, cache_dir=peer_args.cache_dir)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained("google/gemma-1.1-2b-it")
+            self.tokenizer.save_pretrained(peer_args.tokenizer_path)
 
         output_dir = Path(trainer_args.output_dir)
         latest_checkpoint_dir = max(output_dir.glob("checkpoint*"), default=None, key=os.path.getctime)
@@ -46,12 +52,7 @@ class LMTrainingTask:
         # if latest_checkpoint_dir is None:
         #     self.model = SimpleModelForPreTraining(self.config)
         # else:
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
+        bnb_config = bnb_args.get_bnb_config()
 
         self.model = AutoModelForCausalLM.from_pretrained('google/gemma-1.1-2b-it', quantization_config=bnb_config, device_map="auto")
 
@@ -167,7 +168,14 @@ class LMTrainingTask:
         #     )
         # return self._training_dataset
         if self._training_dataset is None:
-            self._training_dataset = load_from_disk('data/gemma_tokenized_wikitext')
+            try:
+                self._training_dataset = load_from_disk('data/gemma_tokenized_wikitext')
+            except FileNotFoundError:
+                self._training_dataset = make_gemma_dataset(
+                    self.tokenizer,
+                    max_sequence_length=self.trainer_args.max_sequence_length
+                )
+                self._training_dataset = load_from_disk('data/gemma_tokenized_wikitext')
         return self._training_dataset
 
 
