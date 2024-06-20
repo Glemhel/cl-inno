@@ -15,6 +15,8 @@ from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
 
 import utils
 from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArguments, BitsAndBitesArguments
+from lib.training.lamb_8bit import CPULAMB8Bit
+from lib.training.lamb import Lamb
 # from huggingface_auth import authorize_with_huggingface
 # from lib.models import SimpleModelConfig, SimpleModelForPreTraining
 
@@ -81,12 +83,16 @@ class LMTrainingTask:
         self.current_sequence_length = mp.Value(ctypes.c_int64, self.trainer_args.max_sequence_length)
 
     def _make_optimizer(self, params) -> torch.optim.Optimizer:
-        return torch.optim.Adam(
+        return Lamb(
             params,
             lr=self.trainer_args.learning_rate,
             betas=(self.trainer_args.adam_beta1, self.trainer_args.adam_beta2),
+            # max_grad_norm=self.trainer_args.max_grad_norm,
+            # clamp_value=self.trainer_args.clamp_value,
             eps=self.trainer_args.adam_epsilon,
-            weight_decay=self.trainer_args.weight_decay
+            weight_decay=self.trainer_args.weight_decay,
+            # reuse_grad_buffers=True,
+            # bias_correction=True
         )
 
     def _make_scheduler(self, optimizer: torch.optim.Optimizer) -> LambdaLR:
