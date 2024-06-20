@@ -91,8 +91,8 @@ class LMTrainingTask:
             # clamp_value=self.trainer_args.clamp_value,
             eps=self.trainer_args.adam_epsilon,
             weight_decay=self.trainer_args.weight_decay,
+            bias_correction=True
             # reuse_grad_buffers=True,
-            # bias_correction=True
         )
 
     def _make_scheduler(self, optimizer: torch.optim.Optimizer) -> LambdaLR:

@@ -21,6 +21,7 @@ class Lamb(Optimizer):
         defaults = dict(lr=lr, betas=betas, eps=eps,
                         weight_decay=weight_decay)
         self.adam = adam
+        self.bias_correction = bias_correction
         super(Lamb, self).__init__(params, defaults)
 
     def step(self, closure=None):
@@ -62,11 +63,15 @@ class Lamb(Optimizer):
                 exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
                 # v_t
                 exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
-
-                # bias_correction1 = 1 - beta1 ** state['step']
-                # bias_correction2 = 1 - beta2 ** state['step']
+                
                 # Apply bias to lr to avoid broadcast.
-                step_size = group['lr'] # * math.sqrt(bias_correction2) / bias_correction1
+                if self.bias_correction:
+                    bias_correction1 = 1 - beta1 ** state['step']
+                    bias_correction2 = 1 - beta2 ** state['step']
+                    step_size = group['lr'] * math.sqrt(bias_correction2) / bias_correction1
+                else:
+                    step_size = group['lr']
+
 
                 weight_norm = p.data.pow(2).sum().sqrt().clamp(0, 10)
 
