@@ -5,14 +5,15 @@ import time
 import torch
 import transformers
 import wandb
+import hivemind
 from hivemind.utils.logging import get_logger, use_hivemind_log_handler
 from huggingface_hub import HfFolder, Repository
 from transformers import HfArgumentParser
 
 import utils
 from arguments import (AuxiliaryPeerArguments, CollaborativeArguments,
-                       HFTrainerArguments)
-from tasks.mlm.task import MLMTrainingTask
+                       HFTrainerArguments, BitsAndBitesArguments)
+from tasks.lm.task import LMTrainingTask
 
 transformers.utils.logging.set_verbosity_warning()
 use_hivemind_log_handler("in_root_logger")
@@ -20,7 +21,7 @@ logger = get_logger(__name__)
 
 
 class CheckpointHandler:
-    def __init__(self, task: MLMTrainingTask, peer_args: AuxiliaryPeerArguments):
+    def __init__(self, task: LMTrainingTask, peer_args: AuxiliaryPeerArguments):
         self.task, self.peer_args = task, peer_args
         self.save_checkpoint_epoch_interval = peer_args.save_checkpoint_epoch_interval
         self.prefix = peer_args.run_id
@@ -81,7 +82,7 @@ class CheckpointHandler:
 
 
 def assist_averaging_in_background(
-        lock: threading.Lock, task: MLMTrainingTask, peer_args: AuxiliaryPeerArguments, finished: threading.Event
+        lock: threading.Lock, task: LMTrainingTask, peer_args: AuxiliaryPeerArguments, finished: threading.Event
 ):
     while not finished.is_set():
         try:
@@ -93,21 +94,37 @@ def assist_averaging_in_background(
 
 
 if __name__ == "__main__":
-    parser = HfArgumentParser((AuxiliaryPeerArguments, HFTrainerArguments, CollaborativeArguments))
-    peer_args, trainer_args, collab_args = parser.parse_args_into_dataclasses()
-    finished, lock = threading.Event(), threading.Lock()
+    parser = HfArgumentParser((AuxiliaryPeerArguments, HFTrainerArguments, CollaborativeArguments, BitsAndBitesArguments))
+    peer_args, trainer_args, collab_args, bnb_args = parser.parse_args_into_dataclasses()
 
-    task = MLMTrainingTask(peer_args, trainer_args, collab_args)
-    dht, collaborative_optimizer = task.dht, task.collaborative_optimizer
+    if peer_args.monitor:
+        validators, local_public_key = utils.make_validators(peer_args.run_id)
+        dht = hivemind.DHT(
+                start=True,
+                initial_peers=peer_args.initial_peers,
+                client_mode=peer_args.client_mode,
+                host_maddrs=peer_args.host_maddrs,
+                announce_maddrs=peer_args.announce_maddrs,
+                use_ipfs=peer_args.use_ipfs,
+                record_validators=validators,
+                identity_path=peer_args.identity_path,
+                # authorizer=self.authorizer,
+            )
+        utils.log_visible_maddrs(dht.get_visible_maddrs(), only_p2p=peer_args.use_ipfs)
+    else:
+        task = LMTrainingTask(peer_args, trainer_args, collab_args, bnb_args)
+        dht, collaborative_optimizer = task.dht, task.collaborative_optimizer
 
     if peer_args.wandb_project is not None:
         wandb.init(project=peer_args.wandb_project)
 
     current_epoch = 0
-    if peer_args.store_checkpoints:
+
+    if peer_args.store_checkpoints and not peer_args.monitor:
         checkpoint_handler = CheckpointHandler(task, peer_args)
 
-    if peer_args.assist_in_averaging:
+    finished, lock = threading.Event(), threading.Lock()
+    if peer_args.assist_in_averaging and not peer_args.monitor:
         assert not peer_args.client_mode, "client-mode peers cannot assist in averaging"
         averaging_thread = threading.Thread(
             name="AveragingAuxThread", target=assist_averaging_in_background,
@@ -157,7 +174,7 @@ if __name__ == "__main__":
                             step=latest_epoch,
                         )
 
-                    if peer_args.store_checkpoints:
+                    if peer_args.store_checkpoints and not peer_args.monitor:
                         if checkpoint_handler.should_save_state(current_epoch):
                             with lock:
                                 checkpoint_handler.save_state(current_epoch)
