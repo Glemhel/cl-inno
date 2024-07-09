@@ -118,8 +118,6 @@ if __name__ == "__main__":
     if peer_args.wandb_project is not None:
         wandb.init(project=peer_args.wandb_project)
 
-    current_epoch = 0
-
     if peer_args.store_checkpoints and not peer_args.monitor:
         checkpoint_handler = CheckpointHandler(task, peer_args)
 
@@ -132,20 +130,25 @@ if __name__ == "__main__":
         )
         averaging_thread.start()
 
+    current_step = 0
+    current_epoch = 0
+
     try:
         while True:
             metrics_entry = dht.get(peer_args.run_id + "_metrics", latest=True)
             if metrics_entry is not None and len(metrics_entry.value) > 0:
                 metrics_dict = metrics_entry.value
                 metrics = [utils.LocalMetrics.parse_obj(metrics_dict[peer].value) for peer in metrics_dict]
+                latest_step = max(item.step for item in metrics)
                 latest_epoch = max(item.epoch for item in metrics)
 
-                if latest_epoch != current_epoch:
+                if latest_step != current_step:
                     logger.debug(f"Got metrics from {len(metrics)} peers")
 
                     for i, metrics_for_peer in enumerate(metrics):
                         logger.debug(f"{i} peer {metrics_for_peer}")
 
+                    current_step = latest_step
                     current_epoch = latest_epoch
                     alive_peers = 0
                     sum_loss = 0
@@ -160,7 +163,7 @@ if __name__ == "__main__":
                         num_samples += item.samples_accumulated
                         sum_mini_steps += item.mini_steps
                     current_loss = sum_loss / sum_mini_steps
-                    logger.info(f"Epoch #{current_epoch}\tloss = {current_loss:.5f}")
+                    logger.info(f"Step #{current_step}\tloss = {current_loss:.5f}")
 
                     if peer_args.wandb_project is not None:
                         wandb.log(
@@ -169,9 +172,9 @@ if __name__ == "__main__":
                                 "alive peers": alive_peers,
                                 "samples": num_samples,
                                 "performance": sum_perf,
-                                "optimizer_step": latest_epoch,
+                                "optimizer_step": latest_step,
                             },
-                            step=latest_epoch,
+                            step=latest_step,
                         )
 
                     if peer_args.store_checkpoints and not peer_args.monitor:
