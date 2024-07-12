@@ -11,8 +11,12 @@ from huggingface_hub import HfFolder, Repository
 from transformers import HfArgumentParser
 
 import utils
-from arguments import (AuxiliaryPeerArguments, CollaborativeArguments,
-                       HFTrainerArguments, BitsAndBitesArguments)
+from arguments import (
+    AuxiliaryPeerArguments,
+    CollaborativeArguments,
+    HFTrainerArguments,
+    BitsAndBitesArguments,
+)
 from tasks.lm.task import LMTrainingTask
 
 transformers.utils.logging.set_verbosity_warning()
@@ -28,7 +32,9 @@ class CheckpointHandler:
         self.local_path = peer_args.local_path
         self.upload_interval = peer_args.upload_interval
         if self.upload_interval is not None:
-            assert task.authorizer is not None, "Model uploading needs Hugging Face auth to be enabled"
+            assert (
+                task.authorizer is not None
+            ), "Model uploading needs Hugging Face auth to be enabled"
             self.repo = Repository(
                 local_dir=self.local_path,
                 clone_from=peer_args.repo_url,
@@ -53,7 +59,10 @@ class CheckpointHandler:
     def is_time_to_upload(self):
         if self.upload_interval is None:
             return False
-        elif self.last_upload_time is None or time.time() - self.last_upload_time >= self.upload_interval:
+        elif (
+            self.last_upload_time is None
+            or time.time() - self.last_upload_time >= self.upload_interval
+        ):
             return True
         else:
             return False
@@ -64,7 +73,10 @@ class CheckpointHandler:
         logger.info("Saving model")
         torch.save(self.task.model.state_dict(), f"{self.local_path}/model_state.pt")
         logger.info("Saving optimizer")
-        torch.save(self.task.collaborative_optimizer.state_dict(), f"{self.local_path}/optimizer_state.pt")
+        torch.save(
+            self.task.collaborative_optimizer.state_dict(),
+            f"{self.local_path}/optimizer_state.pt",
+        )
         self.previous_timestamp = time.time()
         logger.info("Started uploading to Model Hub")
         try:
@@ -78,11 +90,16 @@ class CheckpointHandler:
             logger.info("Finished uploading to Model Hub")
         except Exception:
             logger.exception("Uploading the checkpoint to HF Model Hub failed:")
-            logger.warning("Ensure that your access token is valid and has WRITE permissions")
+            logger.warning(
+                "Ensure that your access token is valid and has WRITE permissions"
+            )
 
 
 def assist_averaging_in_background(
-        lock: threading.Lock, task: LMTrainingTask, peer_args: AuxiliaryPeerArguments, finished: threading.Event
+    lock: threading.Lock,
+    task: LMTrainingTask,
+    peer_args: AuxiliaryPeerArguments,
+    finished: threading.Event,
 ):
     while not finished.is_set():
         try:
@@ -94,29 +111,44 @@ def assist_averaging_in_background(
 
 
 if __name__ == "__main__":
-    parser = HfArgumentParser((AuxiliaryPeerArguments, HFTrainerArguments, CollaborativeArguments, BitsAndBitesArguments))
-    peer_args, trainer_args, collab_args, bnb_args = parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser(
+        (
+            AuxiliaryPeerArguments,
+            HFTrainerArguments,
+            CollaborativeArguments,
+            BitsAndBitesArguments,
+        )
+    )
+    peer_args, trainer_args, collab_args, bnb_args = (
+        parser.parse_args_into_dataclasses()
+    )
 
     if peer_args.monitor:
         validators, local_public_key = utils.make_validators(peer_args.run_id)
         dht = hivemind.DHT(
-                start=True,
-                initial_peers=peer_args.initial_peers,
-                client_mode=peer_args.client_mode,
-                host_maddrs=peer_args.host_maddrs,
-                announce_maddrs=peer_args.announce_maddrs,
-                use_ipfs=peer_args.use_ipfs,
-                record_validators=validators,
-                identity_path=peer_args.identity_path,
-                # authorizer=self.authorizer,
-            )
+            start=True,
+            initial_peers=peer_args.initial_peers,
+            client_mode=peer_args.client_mode,
+            host_maddrs=peer_args.host_maddrs,
+            announce_maddrs=peer_args.announce_maddrs,
+            use_ipfs=peer_args.use_ipfs,
+            record_validators=validators,
+            identity_path=peer_args.identity_path,
+            # authorizer=self.authorizer,
+        )
         utils.log_visible_maddrs(dht.get_visible_maddrs(), only_p2p=peer_args.use_ipfs)
     else:
         task = LMTrainingTask(peer_args, trainer_args, collab_args, bnb_args)
         dht, collaborative_optimizer = task.dht, task.collaborative_optimizer
 
     if peer_args.wandb_project is not None:
-        wandb.init(project=peer_args.wandb_project)
+        run_config = {
+            **peer_args.__dict__,
+            **trainer_args.__dict__,
+            **collab_args.__dict__,
+            **bnb_args.__dict__,
+        }
+        wandb.init(project=peer_args.wandb_project, config=run_config)
 
     if peer_args.store_checkpoints and not peer_args.monitor:
         checkpoint_handler = CheckpointHandler(task, peer_args)
@@ -125,8 +157,10 @@ if __name__ == "__main__":
     if peer_args.assist_in_averaging and not peer_args.monitor:
         assert not peer_args.client_mode, "client-mode peers cannot assist in averaging"
         averaging_thread = threading.Thread(
-            name="AveragingAuxThread", target=assist_averaging_in_background,
-            args=[lock, task, peer_args, finished], daemon=True
+            name="AveragingAuxThread",
+            target=assist_averaging_in_background,
+            args=[lock, task, peer_args, finished],
+            daemon=True,
         )
         averaging_thread.start()
 
@@ -137,7 +171,10 @@ if __name__ == "__main__":
             metrics_entry = dht.get(peer_args.run_id + "_metrics", latest=True)
             if metrics_entry is not None and len(metrics_entry.value) > 0:
                 metrics_dict = metrics_entry.value
-                metrics = [utils.LocalMetrics.parse_obj(metrics_dict[peer].value) for peer in metrics_dict]
+                metrics = [
+                    utils.LocalMetrics.parse_obj(metrics_dict[peer].value)
+                    for peer in metrics_dict
+                ]
                 latest_step = max(item.step for item in metrics)
 
                 if latest_step != current_step:
