@@ -240,3 +240,5 @@ class AuxiliaryPeerArguments(BasePeerArguments):
     )
     assist_refresh: float = field(default=1.0, metadata={"help": "Period (in seconds) for tryin to assist averaging"})
 
+    monitor: bool = field(default=False, metadata={"help": "If True, runs minimal setup without model or average assisting"})
+

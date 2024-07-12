@@ -14,11 +14,11 @@ logger = get_logger(__name__)
 
 
 class LocalMetrics(BaseModel):
-    epoch: conint(ge=0, strict=True)
+    step: conint(ge=0, strict=True)
     samples_per_second: confloat(ge=0.0, strict=True)
     samples_accumulated: conint(ge=0, strict=True)
     loss: StrictFloat
-    mini_steps: conint(ge=0, strict=True)  # queries
+    mini_steps: conint(ge=0, strict=True)
 
 
 class MetricSchema(BaseModel):
