@@ -131,7 +131,6 @@ if __name__ == "__main__":
         averaging_thread.start()
 
     current_step = 0
-    current_epoch = 0
 
     try:
         while True:
@@ -140,7 +139,6 @@ if __name__ == "__main__":
                 metrics_dict = metrics_entry.value
                 metrics = [utils.LocalMetrics.parse_obj(metrics_dict[peer].value) for peer in metrics_dict]
                 latest_step = max(item.step for item in metrics)
-                latest_epoch = max(item.epoch for item in metrics)
 
                 if latest_step != current_step:
                     logger.debug(f"Got metrics from {len(metrics)} peers")
@@ -149,7 +147,6 @@ if __name__ == "__main__":
                         logger.debug(f"{i} peer {metrics_for_peer}")
 
                     current_step = latest_step
-                    current_epoch = latest_epoch
                     alive_peers = 0
                     sum_loss = 0
                     num_samples = 0
@@ -170,17 +167,16 @@ if __name__ == "__main__":
                             {
                                 "loss": current_loss,
                                 "alive peers": alive_peers,
-                                "samples": num_samples,
+                                "total samples": num_samples,
                                 "performance": sum_perf,
                                 "optimizer_step": latest_step,
-                            },
-                            step=latest_step,
+                            }
                         )
 
                     if peer_args.store_checkpoints and not peer_args.monitor:
-                        if checkpoint_handler.should_save_state(current_epoch):
+                        if checkpoint_handler.should_save_state(current_step):
                             with lock:
-                                checkpoint_handler.save_state(current_epoch)
+                                checkpoint_handler.save_state(current_step)
                                 if checkpoint_handler.is_time_to_upload():
                                     checkpoint_handler.upload_checkpoint(current_loss)
             logger.debug("Peer is still alive...")
