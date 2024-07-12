@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-hivemind = "*"
 transformers = "*"
 datasets = "*"
 torch-optimizer = "==0.1.0"
@@ -12,7 +11,7 @@ wandb = "*"
 sentencepiece = "*"
 requests = "*"
 nltk = "*"
-torch = "~=2.2"
+torch = "~=2.2.0"
 accelerate = "*"
 ipykernel = "*"
 jupyter = "*"

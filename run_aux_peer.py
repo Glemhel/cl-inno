@@ -5,14 +5,15 @@ import time
 import torch
 import transformers
 import wandb
+import hivemind
 from hivemind.utils.logging import get_logger, use_hivemind_log_handler
 from huggingface_hub import HfFolder, Repository
 from transformers import HfArgumentParser
 
 import utils
 from arguments import (AuxiliaryPeerArguments, CollaborativeArguments,
-                       HFTrainerArguments)
-from tasks.mlm.task import MLMTrainingTask
+                       HFTrainerArguments, BitsAndBitesArguments)
+from tasks.lm.task import LMTrainingTask
 
 transformers.utils.logging.set_verbosity_warning()
 use_hivemind_log_handler("in_root_logger")
@@ -20,7 +21,7 @@ logger = get_logger(__name__)
 
 
 class CheckpointHandler:
-    def __init__(self, task: MLMTrainingTask, peer_args: AuxiliaryPeerArguments):
+    def __init__(self, task: LMTrainingTask, peer_args: AuxiliaryPeerArguments):
         self.task, self.peer_args = task, peer_args
         self.save_checkpoint_epoch_interval = peer_args.save_checkpoint_epoch_interval
         self.prefix = peer_args.run_id
@@ -81,7 +82,7 @@ class CheckpointHandler:
 
 
 def assist_averaging_in_background(
-        lock: threading.Lock, task: MLMTrainingTask, peer_args: AuxiliaryPeerArguments, finished: threading.Event
+        lock: threading.Lock, task: LMTrainingTask, peer_args: AuxiliaryPeerArguments, finished: threading.Event
 ):
     while not finished.is_set():
         try:
@@ -93,21 +94,35 @@ def assist_averaging_in_background(
 
 
 if __name__ == "__main__":
-    parser = HfArgumentParser((AuxiliaryPeerArguments, HFTrainerArguments, CollaborativeArguments))
-    peer_args, trainer_args, collab_args = parser.parse_args_into_dataclasses()
-    finished, lock = threading.Event(), threading.Lock()
+    parser = HfArgumentParser((AuxiliaryPeerArguments, HFTrainerArguments, CollaborativeArguments, BitsAndBitesArguments))
+    peer_args, trainer_args, collab_args, bnb_args = parser.parse_args_into_dataclasses()
 
-    task = MLMTrainingTask(peer_args, trainer_args, collab_args)
-    dht, collaborative_optimizer = task.dht, task.collaborative_optimizer
+    if peer_args.monitor:
+        validators, local_public_key = utils.make_validators(peer_args.run_id)
+        dht = hivemind.DHT(
+                start=True,
+                initial_peers=peer_args.initial_peers,
+                client_mode=peer_args.client_mode,
+                host_maddrs=peer_args.host_maddrs,
+                announce_maddrs=peer_args.announce_maddrs,
+                use_ipfs=peer_args.use_ipfs,
+                record_validators=validators,
+                identity_path=peer_args.identity_path,
+                # authorizer=self.authorizer,
+            )
+        utils.log_visible_maddrs(dht.get_visible_maddrs(), only_p2p=peer_args.use_ipfs)
+    else:
+        task = LMTrainingTask(peer_args, trainer_args, collab_args, bnb_args)
+        dht, collaborative_optimizer = task.dht, task.collaborative_optimizer
 
     if peer_args.wandb_project is not None:
         wandb.init(project=peer_args.wandb_project)
 
-    current_epoch = 0
-    if peer_args.store_checkpoints:
+    if peer_args.store_checkpoints and not peer_args.monitor:
         checkpoint_handler = CheckpointHandler(task, peer_args)
 
-    if peer_args.assist_in_averaging:
+    finished, lock = threading.Event(), threading.Lock()
+    if peer_args.assist_in_averaging and not peer_args.monitor:
         assert not peer_args.client_mode, "client-mode peers cannot assist in averaging"
         averaging_thread = threading.Thread(
             name="AveragingAuxThread", target=assist_averaging_in_background,
@@ -115,21 +130,23 @@ if __name__ == "__main__":
         )
         averaging_thread.start()
 
+    current_step = 0
+
     try:
         while True:
             metrics_entry = dht.get(peer_args.run_id + "_metrics", latest=True)
             if metrics_entry is not None and len(metrics_entry.value) > 0:
                 metrics_dict = metrics_entry.value
                 metrics = [utils.LocalMetrics.parse_obj(metrics_dict[peer].value) for peer in metrics_dict]
-                latest_epoch = max(item.epoch for item in metrics)
+                latest_step = max(item.step for item in metrics)
 
-                if latest_epoch != current_epoch:
+                if latest_step != current_step:
                     logger.debug(f"Got metrics from {len(metrics)} peers")
 
                     for i, metrics_for_peer in enumerate(metrics):
                         logger.debug(f"{i} peer {metrics_for_peer}")
 
-                    current_epoch = latest_epoch
+                    current_step = latest_step
                     alive_peers = 0
                     sum_loss = 0
                     num_samples = 0
@@ -143,24 +160,23 @@ if __name__ == "__main__":
                         num_samples += item.samples_accumulated
                         sum_mini_steps += item.mini_steps
                     current_loss = sum_loss / sum_mini_steps
-                    logger.info(f"Epoch #{current_epoch}\tloss = {current_loss:.5f}")
+                    logger.info(f"Step #{current_step}\tloss = {current_loss:.5f}")
 
                     if peer_args.wandb_project is not None:
                         wandb.log(
                             {
                                 "loss": current_loss,
                                 "alive peers": alive_peers,
-                                "samples": num_samples,
+                                "total samples": num_samples,
                                 "performance": sum_perf,
-                                "optimizer_step": latest_epoch,
-                            },
-                            step=latest_epoch,
+                                "optimizer_step": latest_step,
+                            }
                         )
 
-                    if peer_args.store_checkpoints:
-                        if checkpoint_handler.should_save_state(current_epoch):
+                    if peer_args.store_checkpoints and not peer_args.monitor:
+                        if checkpoint_handler.should_save_state(current_step):
                             with lock:
-                                checkpoint_handler.save_state(current_epoch)
+                                checkpoint_handler.save_state(current_step)
                                 if checkpoint_handler.is_time_to_upload():
                                     checkpoint_handler.upload_checkpoint(current_loss)
             logger.debug("Peer is still alive...")
