@@ -23,15 +23,22 @@ export LISTEN_ON=/ip4/0.0.0.0/tcp/$PORT
 export ANNOUNCE_ON=/ip4/$MY_IP/tcp/$PORT
 
 BATCH_SIZE=128
-OPTIMIZER="adam"
-LR=0.0001 
+OPTIMIZER="sgd"
+LR=0.005
 
 export BANDWIDTH=`python -c "import json; speedtest = json.load(open('speedtest.json')); print(int(max(1, min(speedtest['upload'], speedtest['download']) / 1e6)))"`
 export COMMON_ARGUMENTS="--run_id $EXP_NAME --bandwidth $BANDWIDTH --target_batch_size $BATCH_SIZE \
-    --run_name $EXP_NAME --learning_rate $LR"
+    --run_name $EXP_NAME --learning_rate $LR --optimizer_str $OPTIMIZER --matchmaking_time=20"
 
 rm -rf pids.txt
 N_PEERS=2
+
+for i in $(seq 0 $N_PEERS);
+do
+    PEER_OUTPUT_PATH="outputs$i"
+    rm -rf $PEER_OUTPUT_PATH
+done
+
 for i in $(seq 0 $N_PEERS);
 do
     echo "Running peer $i..."
@@ -61,7 +68,7 @@ do
     PEER_PID=$!
     echo "PEER $i PID: $PEER_PID" | tee -a pids.txt
     if [[ "$i" = "0" ]]; then
-      sleep 10
+      sleep 20
     fi
 done
 
