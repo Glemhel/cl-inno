@@ -1,4 +1,9 @@
 #! /bin/bash
+
+echo "Running local experiment..."
+pgid=$(ps -o pgid= $$)
+echo "PGID of base process: $pgid"
+
 # NETWORK
 export MY_IP="10.90.122.133"
 export BASE_PORT=36100
@@ -22,13 +27,19 @@ ulimit -n 16384 # this line is important, ignoring it may cause Too Many Open Fi
 export LISTEN_ON=/ip4/0.0.0.0/tcp/$PORT
 export ANNOUNCE_ON=/ip4/$MY_IP/tcp/$PORT
 
+
 BATCH_SIZE=128
-OPTIMIZER="sgd"
+OPTIMIZER="lamb"
 LR=0.005
 
 export BANDWIDTH=`python -c "import json; speedtest = json.load(open('speedtest.json')); print(int(max(1, min(speedtest['upload'], speedtest['download']) / 1e6)))"`
 export COMMON_ARGUMENTS="--run_id $EXP_NAME --bandwidth $BANDWIDTH --target_batch_size $BATCH_SIZE \
-    --run_name $EXP_NAME --learning_rate $LR --optimizer_str $OPTIMIZER --matchmaking_time=20"
+    --run_name $EXP_NAME --learning_rate $LR --optimizer_str $OPTIMIZER --matchmaking_time=20 \
+    --per_device_train_batch_size 1 --gradient_accumulation_steps 1 \
+    --average_state_every 3 \
+    --use_local_updates true --reuse_grad_buffers false --delay_grad_averaging false"
+
+echo "Common arguments for peers: $COMMON_ARGUMENTS"
 
 rm -rf pids.txt
 N_PEERS=2
@@ -65,12 +76,13 @@ do
                 > peer$i.log &
     fi
 
-    PEER_PID=$!
-    echo "PEER $i PID: $PEER_PID" | tee -a pids.txt
+    echo "$(ps -o pid,pgid $!)" | tee -a pids.txt
     if [[ "$i" = "0" ]]; then
       sleep 20
     fi
 done
+
+echo "Finished setting up peers, exiting..."
 
 #   # --initial_peers $INITIAL_PEERS --bandwidth $BANDWIDTH \
 # can tune per_device_train_batch_size, gradient_accumulation steps, --fp16, --gradient_checkpoints based on the device. A good rule of thumb is that the device should compute (batch size x num accumulations) gradients over 1-10 seconds. Setting very large gradient_accumulation_steps can cause your peer to miss an averaging round.
