@@ -36,8 +36,7 @@ export BANDWIDTH=`python -c "import json; speedtest = json.load(open('speedtest.
 export COMMON_ARGUMENTS="--run_id $EXP_NAME --bandwidth $BANDWIDTH --target_batch_size $BATCH_SIZE \
     --run_name $EXP_NAME --learning_rate $LR --optimizer_str $OPTIMIZER --matchmaking_time=20 \
     --per_device_train_batch_size 1 --gradient_accumulation_steps 1 \
-    --average_state_every 3 \
-    --use_local_updates true --reuse_grad_buffers false --delay_grad_averaging false"
+    --average_state_every 4 --use_local_updates true --reuse_grad_buffers false --delay_grad_averaging false"
 
 echo "Common arguments for peers: $COMMON_ARGUMENTS"
 
