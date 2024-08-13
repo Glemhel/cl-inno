@@ -13,3 +13,17 @@ WIP: not tested for several clients now. Only one local client for Gemma+LoRA
 2. Install hivemind:
     - default installation: `pipenv install hivemind`
     - custom installation: `pipenv shell`, `pip install git+<custom_hivemind_github>`
+
+# Running experiments locally
+For easier local convergence testing runs, `run_local_experiment.sh` is implemented. The script contains all main setups for peers, runs them in background with the same settings.
+
+Important settings:
+- N_PEERS - number of peers to run. Additional monitor peer will be run.
+- batch_size, optimizer, lr - run settings.
+- COMMON_ARGUMENTS - command line arguments for peers.
+
+Script automatically cleans output folders to disable checkpoints for clear runs. Created processes report to peerX.log files. Created processes ids are saved to `pids.txt`.
+
+To run, simply `./run_local_experiment.sh`.
+
+To stop the experiment, we need to kill process group. `ps j -A | grep run_base_trainer.py` to find processes spawned by our experiment. We need third number `PGID` from any of our trainer peers. To kill all processes in our experiment, run `kill -- -PGID_OF_SOME_PROCESS`. Check that everything is fine with `nvidia-smi` being empty of your processes. NOTE: I am not entirely sure this cleans up *everything*, but works for me.

@@ -122,6 +122,13 @@ class LMTrainingTask:
                 eps=self.trainer_args.adam_epsilon,
                 weight_decay=self.trainer_args.weight_decay,
             )
+        elif self._optimizer_str == "sgd":
+            return torch.optim.SGD(
+                params,
+                lr=self.trainer_args.learning_rate,
+                weight_decay=self.trainer_args.weight_decay,
+                momentum=self.trainer_args.adam_beta1,
+            )
         elif self._optimizer_str == "lamb":
             return Lamb(
                 params,

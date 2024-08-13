@@ -156,6 +156,20 @@ class CollaborativeCallback(transformers.TrainerCallback):
         self.model.load_state_dict(state["model"])
         self.optimizer.load_state_dict(state["optimizer"])
 
+def print_trainable_parameters(model):
+    """
+    Prints the number of trainable parameters in the model.
+    """
+    trainable_params = 0
+    all_param = 0
+    for _, param in model.named_parameters():
+        all_param += param.numel()
+        if param.requires_grad:
+            trainable_params += param.numel()
+    print(
+        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}"
+    )
+
 
 def main():
     parser = HfArgumentParser(
@@ -192,6 +206,8 @@ def main():
         peer_args.statistics_expiration,
         peer_args.backup_every_epochs,
     )
+
+    print_trainable_parameters(model)
 
     # Create a trainer with customized callbacks and settings suitable for a collaborative training session
     trainer = CollaborativeHFTrainer(
