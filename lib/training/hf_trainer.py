@@ -35,7 +35,7 @@ class CollaborativeHFTrainer(Trainer):
         # if reuse_grad_buffers is True, we should accumulate gradients in .grad without zeroing them after each step
         return IgnoreGradManipulations(
             super()._wrap_model(model, training=training),
-            override_zero_grad=self.collaborative_optimizer.grad_averager.reuse_grad_buffers,
+            override_zero_grad=(self.collaborative_optimizer.grad_averager is not None and self.collaborative_optimizer.grad_averager.reuse_grad_buffers),
         )
 
 

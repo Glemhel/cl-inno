@@ -211,7 +211,9 @@ class LMTrainingTask:
                 less=Float16Compression(),
                 greater_equal=Uniform8BitQuantization(),
             )
-
+            print('---')
+            print(asdict(self.collab_args))
+            print('---')
             self._collaborative_optimizer = hivemind.Optimizer(
                 dht=self.dht,
                 params=self._make_param_groups(),
