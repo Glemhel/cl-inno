@@ -26,6 +26,22 @@ use_hivemind_log_handler("in_root_logger")
 logger = get_logger()
 
 
+def trace(frame, event, arg):
+    if event == 'call' and frame.f_code.co_name == 'write':
+        return
+    filename: str = frame.f_code.co_filename
+    if not filename.startswith('/mnt/d/cl-inno/') and not filename.endswith('functional.py'):
+        return
+    if event == 'call':
+        print("%s, %s:%d (%s)" % (event, filename, frame.f_lineno, frame.f_code.co_name))
+    else:
+        print("%s, %s:%d" % (event, filename, frame.f_lineno))
+    return trace
+
+import sys
+#sys.settrace(trace)
+
+
 class CollaborativeCallback(transformers.TrainerCallback):
     """
     This callback monitors and reports collaborative training progress.

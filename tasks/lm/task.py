@@ -24,7 +24,7 @@ from arguments import (
     HFTrainerArguments,
     BitsAndBitesArguments,
 )
-from lib.training.lamb_8bit import CPULAMB8Bit
+from lib.training.lamb_8bit_experimantal2 import CPULAMB8Bit
 from lib.training.lamb import Lamb
 
 # from huggingface_auth import authorize_with_huggingface
@@ -131,6 +131,18 @@ class LMTrainingTask:
             )
         elif self._optimizer_str == "lamb":
             return Lamb(
+                params,
+                lr=self.trainer_args.learning_rate,
+                betas=(self.trainer_args.adam_beta1, self.trainer_args.adam_beta2),
+                # max_grad_norm=self.trainer_args.max_grad_norm,
+                # clamp_value=self.trainer_args.clamp_value,
+                eps=self.trainer_args.adam_epsilon,
+                weight_decay=self.trainer_args.weight_decay,
+                bias_correction=True,
+                # reuse_grad_buffers=True,
+            )
+        elif self._optimizer_str == "lambcpu":
+            return CPULAMB8Bit(
                 params,
                 lr=self.trainer_args.learning_rate,
                 betas=(self.trainer_args.adam_beta1, self.trainer_args.adam_beta2),

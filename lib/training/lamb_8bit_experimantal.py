@@ -212,6 +212,8 @@ class CPULAMB8Bit(Optimizer2State):
             self.update_chunk_size,
         )
 
+        #print('GRAD', grad_cpu)
+
         if state["state1"].dtype != torch.uint8:
             # not quantized: update normally
             exp_avg, exp_avg_sq = state["state1"], state["state2"]
@@ -226,22 +228,28 @@ class CPULAMB8Bit(Optimizer2State):
             return param_delta
         elif p_cpu.numel() <= chunk_size:
             # quantized tensor within chunk size
-            exp_avg = dequantize_blockwise(
-                state["state1"],
-                (state["absmax1"], state["qmap1"]),
-                blocksize=block_size,
-            )
-            exp_avg_sq = dequantize_blockwise(
-                state["state2"],
-                (state["absmax2"], state["qmap2"]),
-                blocksize=block_size,
-            )
+            if step == 1:
+                exp_avg = torch.rand_like(state["state1"], memory_format=torch.preserve_format, 
+                                          device=state["state1"].device, dtype=torch.float32)
+                exp_avg_sq = torch.rand_like(state["state2"], memory_format=torch.preserve_format, 
+                                             device=state["state2"].device, dtype=torch.float32)
+            else:
+                exp_avg = dequantize_blockwise(
+                    state["state1"],
+                    absmax=state["absmax1"], code=state["qmap1"],
+                    blocksize=block_size,
+                )
+                exp_avg_sq = dequantize_blockwise(
+                    state["state2"],
+                    absmax=state["absmax2"], code=state["qmap2"],
+                    blocksize=block_size,
+                )
 
             exp_avg.mul_(beta1).add_(grad_cpu, alpha=1 - beta1)
             exp_avg_sq.mul_(beta2).addcmul_(grad_cpu, grad_cpu, value=1 - beta2)
 
-            quantize_blockwise(exp_avg, state["qmap1"], state["absmax1"], out=state["state1"])
-            quantize_blockwise(exp_avg_sq, state["qmap2"], state["absmax2"], out=state["state2"])
+            quantize_blockwise(exp_avg, code=state["qmap1"], absmax=state["absmax1"], out=state["state1"])
+            quantize_blockwise(exp_avg_sq, code=state["qmap2"], absmax=state["absmax2"], out=state["state2"])
             # note: quantize_blockwise also modifies qmap and absmax in-place
 
             param_delta = exp_avg.div_(exp_avg_sq.sqrt_().add_(eps))
@@ -275,10 +283,10 @@ class CPULAMB8Bit(Optimizer2State):
                     )  # clone chunks to ensure that tensors do not have offsets
 
                 exp_avg_chunk = dequantize_blockwise(
-                    chunk_state1, (chunk_absmax1, state["qmap1"]), blocksize=block_size
+                    chunk_state1, absmax=chunk_absmax1, code=state["qmap1"], blocksize=block_size
                 )
                 exp_avg_sq_chunk = dequantize_blockwise(
-                    chunk_state2, (chunk_absmax2, state["qmap2"]), blocksize=block_size
+                    chunk_state2, absmax=chunk_absmax2, code=state["qmap2"], blocksize=block_size
                 )
 
                 exp_avg_chunk.mul_(beta1).add_(chunk_grad, alpha=1 - beta1)
@@ -290,11 +298,11 @@ class CPULAMB8Bit(Optimizer2State):
                 flat_state1[chunk], (
                     state["absmax1"][chunk_blocks],
                     state["qmap1"],
-                ) = quantize_blockwise(exp_avg_chunk, state["qmap1"], chunk_absmax1, out=chunk_state1)
+                ) = quantize_blockwise(exp_avg_chunk, code=state["qmap1"], absmax=chunk_absmax1, out=chunk_state1)
                 flat_state2[chunk], (
                     state["absmax2"][chunk_blocks],
                     state["qmap2"],
-                ) = quantize_blockwise(exp_avg_sq_chunk, state["qmap2"], chunk_absmax2, out=chunk_state2)
+                ) = quantize_blockwise(exp_avg_sq_chunk, code=state["qmap2"], absmax=chunk_absmax2, out=chunk_state2)
                 # note: we need to explicitly assign new quantized tensors because of cloning earlier
 
                 torch.div(
