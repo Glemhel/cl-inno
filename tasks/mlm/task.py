@@ -18,7 +18,7 @@ import utils
 from arguments import BasePeerArguments, CollaborativeArguments, HFTrainerArguments
 from huggingface_auth import authorize_with_huggingface
 from lib.models import LeanAlbertConfig, LeanAlbertForPreTraining
-from lib.training.lamb_8bit import CPULAMB8Bit
+from lib.training.lamb_8bit_experimantal2 import CPULAMB8Bit
 import multiprocessing as mp
 
 from .whole_word_mask import DataCollatorForWholeWordMask
