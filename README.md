@@ -26,4 +26,4 @@ Script automatically cleans output folders to disable checkpoints for clear runs
 
 To run, simply `./run_local_experiment.sh`.
 
-To stop the experiment, we need to kill process group. `ps j -A | grep run_base_trainer.py` to find processes spawned by our experiment. We need third number `PGID` from any of our trainer peers. To kill all processes in our experiment, run `kill -- -PGID_OF_SOME_PROCESS`. Check that everything is fine with `nvidia-smi` being empty of your processes. NOTE: I am not entirely sure this cleans up *everything*, but works for me.
+To stop the experiment, we need to kill process group. Processed PIDS and PGIDs are saved to `pids.txt`. Alternatively, use `ps j -A | grep run_base_trainer.py` to find processes spawned by our experiment. We need third number `PGID` from any of our trainer peers. To kill all processes in our experiment, run `kill -- -PGID_OF_SOME_PROCESS`. Check that everything is fine with `nvidia-smi` being empty of your processes. NOTE: I am not entirely sure this cleans up *everything*, but works for me.
