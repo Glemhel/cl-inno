@@ -70,6 +70,12 @@ rm ~/miniconda3/miniconda.sh
     ```shell
     wandb login
     ```
+7. Запустить `setup.sh`:
+
+   ```shell
+   cd ~/cl-inno
+   ./setup.sh
+   ```
 
 ## Запуск cl-inno base_trainer
 
@@ -80,20 +86,14 @@ rm ~/miniconda3/miniconda.sh
     cd ~/cl-inno
     ```
 
-2. Запустить `setup.sh`:
-
-    ```shell
-    ./setup.sh
-    ```
-
-3. Изменить `run_base_trainer.sh`:
+2. Изменить `run_base_trainer.sh`:
    - MY_IP=<IP адрес сервера>
    - PORT=<Свободный порт>
    - Если обучение запускается распределенно:
      - INITIAL_PEERS=<initial_peers любого из пиров>
      - Раскомментировать/добавить параметры `--initial_peers $INITIAL_PEERS --bandwidth $BANDWIDTH` в конце основной команды `python run_base_trainer.py ...`
 
-4. Запустить `run_base_trainer.sh`:
+3. Запустить `run_base_trainer.sh`:
 
    ```shell
    ./run_base_trainer.sh
