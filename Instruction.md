@@ -12,6 +12,9 @@ rm ~/miniconda3/miniconda.sh
 После установки, в зависимости от shell запустить:
 ```shell
 ~/miniconda3/bin/conda init bash
+```
+Или
+```
 ~/miniconda3/bin/conda init zsh
 ```
 
