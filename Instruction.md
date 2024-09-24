@@ -20,6 +20,7 @@ rm ~/miniconda3/miniconda.sh
 1. Склонировать репозиторий в папку `~/cl-inno`:
 
     ```shell
+    cd ~
     git clone git@github.com:Glemhel/cl-inno.git
     ```
 2. Зайти в папку `~/cl-inno`, создать conda env `cl-inno` и активировать его:
@@ -87,7 +88,7 @@ rm ~/miniconda3/miniconda.sh
    - PORT=<Свободный порт>
    - Если обучение запускается распределенно:
      - INITIAL_PEERS=<initial_peers любого из пиров>
-     - Раскоментировать/добавить параметры `--initial_peers $INITIAL_PEERS --bandwidth $BANDWIDTH` в конце основной команды `python run_base_trainer.py ...`
+     - Раскомментировать/добавить параметры `--initial_peers $INITIAL_PEERS --bandwidth $BANDWIDTH` в конце основной команды `python run_base_trainer.py ...`
 
 4. Запустить `run_base_trainer.sh`:
 
