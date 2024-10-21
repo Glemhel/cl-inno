@@ -13,16 +13,17 @@ from hivemind import (
     Uniform8BitQuantization,
 )
 from torch.optim.lr_scheduler import LambdaLR
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer, AutoConfig
 from transformers import GemmaTokenizer, DataCollatorForLanguageModeling
-from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
+from peft import prepare_model_for_kbit_training, get_peft_model
 
 import utils
 from arguments import (
     BasePeerArguments,
     CollaborativeArguments,
     HFTrainerArguments,
-    BitsAndBitesArguments,
+    BitsAndBytesArguments,
+    LoraArguments,
 )
 from lib.training.lamb_8bit_experimantal2 import CPULAMB8Bit
 from lib.training.lamb import Lamb
@@ -49,26 +50,28 @@ class LMTrainingTask:
         peer_args: BasePeerArguments,
         trainer_args: HFTrainerArguments,
         collab_args: CollaborativeArguments,
-        bnb_args: BitsAndBitesArguments,
+        bnb_args: BitsAndBytesArguments,
+        lora_args: LoraArguments
     ):
-        self.peer_args, self.trainer_args, self.collab_args, self.bnb_args = (
+        self.peer_args, self.trainer_args, self.collab_args, self.bnb_args, self.lora_args = (
             peer_args,
             trainer_args,
             collab_args,
             bnb_args,
+            lora_args
         )
         transformers.set_seed(trainer_args.seed)
 
         self.validators, self.local_public_key = utils.make_validators(
             self.peer_args.run_id
         )
-        if os.path.exists(peer_args.tokenizer_path):
-            self.tokenizer = GemmaTokenizer.from_pretrained(
-                peer_args.tokenizer_path, cache_dir=peer_args.cache_dir
+        if os.path.exists(trainer_args.tokenizer_path):
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                trainer_args.tokenizer_path, cache_dir=peer_args.cache_dir
             )
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained("google/gemma-1.1-2b-it")
-            self.tokenizer.save_pretrained(peer_args.tokenizer_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.trainer_args.model_name)
+            self.tokenizer.save_pretrained(trainer_args.tokenizer_path)
 
         output_dir = Path(trainer_args.output_dir)
         latest_checkpoint_dir = max(
@@ -78,34 +81,30 @@ class LMTrainingTask:
         # if latest_checkpoint_dir is None:
         #     self.model = SimpleModelForPreTraining(self.config)
         # else:
-        bnb_config = bnb_args.get_bnb_config()
+        bnb_config = None
+        if trainer_args.use_peft_and_quantization:
+            bnb_config = bnb_args.get_bnb_config()
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            "google/gemma-1.1-2b-it", quantization_config=bnb_config, device_map="auto"
-        )
+        if self.peer_args.use_pretrained_weights:
+            AutoModelForCausalLM
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.trainer_args.model_name, 
+                quantization_config=bnb_config, 
+                device_map="auto",
+            )
+        else:
+            config = AutoConfig.from_pretrained(self.trainer_args.model_name, local_files_only=True)
+            
+            self.model = AutoModelForCausalLM.from_config(
+                config,  
+            )
 
         self.model.gradient_checkpointing_enable()
-        self.model = prepare_model_for_kbit_training(self.model)
+        if trainer_args.use_peft_and_quantization:
+            lora_config = lora_args.get_lora_config()
+            self.model = prepare_model_for_kbit_training(self.model)
+            self.model = get_peft_model(self.model, lora_config)
 
-        config = LoraConfig(
-            r=4,
-            lora_alpha=64,
-            target_modules=[
-                "q_proj",
-                "k_proj",
-                "v_proj",
-                "o_proj",
-                "gate_proj",
-                "up_proj",
-                "down_proj",
-                "lm_head",
-            ],
-            bias="none",
-            lora_dropout=0.05,  # Conventional
-            task_type="CAUSAL_LM",
-        )
-
-        self.model = get_peft_model(self.model, config)
         self.current_sequence_length = mp.Value(
             ctypes.c_int64, self.trainer_args.max_sequence_length
         )
@@ -261,13 +260,16 @@ class LMTrainingTask:
         # return self._training_dataset
         if self._training_dataset is None:
             try:
-                self._training_dataset = load_from_disk("data/gemma_tokenized_wikitext")
+                self._training_dataset = load_from_disk(self.trainer_args.tokenized_dataset_path)
             except FileNotFoundError:
                 self._training_dataset = make_gemma_dataset(
                     self.tokenizer,
+                    self.trainer_args.dataset_path,
+                    self.trainer_args.dataset_name,
+                    self.trainer_args.tokenized_dataset_path,
                     max_sequence_length=self.trainer_args.max_sequence_length,
                 )
-                self._training_dataset = load_from_disk("data/gemma_tokenized_wikitext")
+                self._training_dataset = load_from_disk(self.trainer_args.tokenized_dataset_path)
         return self._training_dataset
 
     @property

@@ -4,12 +4,13 @@ from typing import List, Optional, Union
 import torch
 from transformers import TrainingArguments
 from transformers import BitsAndBytesConfig
+from peft import LoraConfig
 
 
 @dataclass
-class BitsAndBitesArguments:
+class BitsAndBytesArguments:
     """
-    Arguments for LMTrainingTask that are specific to BitsAndBites configuration
+    Arguments for LMTrainingTask that are specific to BitsAndBytes configuration
     """
 
     load_in_8bit: bool = field(
@@ -61,6 +62,33 @@ class BitsAndBitesArguments:
             bnb_4bit_compute_dtype=self.bnb_4bit_compute_dtype,
             bnb_4bit_quant_type=self.bnb_4bit_quant_type,
             bnb_4bit_use_double_quant=self.bnb_4bit_use_double_quant,
+        )
+
+@dataclass
+class LoraArguments:
+    r: int = field(
+        default=4, metadata={"help": "The dimension of the low-rank matrices"}
+    )
+    lora_alpha: int = field(
+        default=64, metadata={"help": "The scaling factor for the low-rank matrices"}
+    )
+    def get_lora_config(self):
+        return LoraConfig(
+            r=self.r,
+            lora_alpha=self.lora_alpha,
+            target_modules=[
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj",
+                "lm_head",
+            ],
+            bias="none",
+            lora_dropout=0.05,  # Conventional
+            task_type="CAUSAL_LM",
         )
 
 
@@ -132,7 +160,16 @@ class CollaborativeArguments:
 @dataclass
 class HFTrainerArguments(TrainingArguments):
     """Arguments for huggingface/transformers.Trainer"""
-
+    model_name: str = field(
+        default="google/gemma-1.1-2b-it", metadata={"help": "model name"}
+    )
+    dataset_path: str = field(
+        default="wikitext", metadata={"help": "path of dataset in the 'datasets' library"}
+    )
+    dataset_name: str = field(
+        default="wikitext-103-raw-v1", metadata={"help": "name of dataset in the 'datasets' library"}
+    )
+        
     per_device_train_batch_size: int = 1
     per_device_eval_batch_size: int = 1
     gradient_accumulation_steps: int = 1
@@ -178,6 +215,13 @@ class HFTrainerArguments(TrainingArguments):
     save_steps: int = 10**30
     save_total_limit: int = 2
 
+    use_peft_and_quantization: bool = field(
+        default=False, metadata={
+            "help": "Whether or not to use Lora and quantization "
+                "(Only if --use_pretrained_weights=Truw https://github.com/huggingface/transformers/issues/26901)"
+        }
+    )
+    
     @property
     def batch_size_per_step(self):
         """Compute the number of training sequences contributed by each .step() from this peer"""
@@ -187,6 +231,20 @@ class HFTrainerArguments(TrainingArguments):
         if torch.cuda.device_count() > 0:
             total_batch_size_per_step *= torch.cuda.device_count()
         return total_batch_size_per_step
+    
+    @property
+    def tokenized_dataset_path(self) -> str: 
+        '''
+        Returns path to tokenized dataset
+        '''
+        return "_".join(["data/tokenized", *(self.model_name.lower().split('/')), *(self.dataset_name.lower().split('/'))])
+    @property
+    def tokenizer_path(self) -> str: 
+        '''
+        Returns path to tokenizer
+        '''
+        return "_".join(["data/tokenizer", *(self.model_name.lower().split('/'))])
+    
 
 
 @dataclass
@@ -211,11 +269,11 @@ class BasePeerArguments:
     run_id: str = field(
         metadata={"help": "A unique experiment name, used as prefix for all DHT keys"}
     )
+    use_pretrained_weights: bool = field(
+        default=True, metadata={"help": "Use base pretrained weights from HF"}
+    )
     model_config_path: Optional[str] = field(
         default="./tasks/lm/model.json", metadata={"help": "Path to the model config"}
-    )
-    tokenizer_path: Optional[str] = field(
-        default="data/tokenizer", metadata={"help": "Path to the tokenizer"}
     )
     cache_dir: Optional[str] = field(
         default="./cache", metadata={"help": "Path to the cache"}
@@ -275,7 +333,7 @@ class BasePeerArguments:
     optimizer_str: str = field(
         default="adam",
     )
-
+        
 
 @dataclass
 class TrainingPeerArguments(BasePeerArguments):
