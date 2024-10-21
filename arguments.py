@@ -115,12 +115,6 @@ class CollaborativeArguments:
     auxiliary: bool = field(
         default=False, metadata={"help": "Whether or not peer is auxilary"}
     )
-    average_state_every: int = field(
-        default=1,
-        metadata={
-            "help": "average state (parameters, chosen opt tensors) with peers every this many **epochs**"
-        },
-    )
     use_local_updates: bool = field(
         default=False,
         metadata={
