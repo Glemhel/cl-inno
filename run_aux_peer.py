@@ -165,6 +165,8 @@ if __name__ == "__main__":
         averaging_thread.start()
 
     current_step = 0
+    start_time = None
+    last_time = None
 
     try:
         while True:
@@ -176,6 +178,10 @@ if __name__ == "__main__":
                     for peer in metrics_dict
                 ]
                 latest_step = max(item.step for item in metrics)
+
+                if start_time is None:
+                    start_time = time.time()
+                    last_time = start_time
 
                 if latest_step != current_step:
                     logger.debug(f"Got metrics from {len(metrics)} peers")
@@ -189,6 +195,11 @@ if __name__ == "__main__":
                     num_samples = 0
                     sum_perf = 0
                     sum_mini_steps = 0
+
+                    elapsed_time = time.time() - start_time
+                    delta_time = time.time() - last_time
+                    last_time = time.time()
+                    
 
                     for item in metrics:
                         sum_loss += item.loss
@@ -207,6 +218,8 @@ if __name__ == "__main__":
                                 "total samples": num_samples,
                                 "performance": sum_perf,
                                 "optimizer_step": latest_step,
+                                "elapsed_time": elapsed_time,
+                                "delta_time": delta_time,
                             }
                         )
 
