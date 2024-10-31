@@ -218,7 +218,7 @@ class HFTrainerArguments(TrainingArguments):
     use_peft_and_quantization: bool = field(
         default=False, metadata={
             "help": "Whether or not to use Lora and quantization "
-                "(Only if --use_pretrained_weights=Truw https://github.com/huggingface/transformers/issues/26901)"
+                "(Only if --use_pretrained_weights=True https://github.com/huggingface/transformers/issues/26901)"
         }
     )
     
@@ -333,7 +333,7 @@ class BasePeerArguments:
     optimizer_str: str = field(
         default="adam",
     )
-        
+
 
 @dataclass
 class TrainingPeerArguments(BasePeerArguments):

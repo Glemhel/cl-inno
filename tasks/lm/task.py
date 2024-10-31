@@ -34,7 +34,7 @@ from lib.training.lamb import Lamb
 import multiprocessing as mp
 
 from .base_data import make_training_dataset
-from .gemma_data import make_gemma_dataset
+from .data import make_dataset
 
 hivemind.use_hivemind_log_handler("in_root_logger")
 logger = hivemind.get_logger()
@@ -93,7 +93,9 @@ class LMTrainingTask:
                 device_map="auto",
             )
         else:
-            config = AutoConfig.from_pretrained(self.trainer_args.model_name, local_files_only=True)
+            # config = AutoConfig.from_pretrained(self.trainer_args.model_name, local_files_only=True)
+            config = AutoConfig.from_pretrained(self.trainer_args.model_name)
+
             
             self.model = AutoModelForCausalLM.from_config(
                 config,  
@@ -262,7 +264,7 @@ class LMTrainingTask:
             try:
                 self._training_dataset = load_from_disk(self.trainer_args.tokenized_dataset_path)
             except FileNotFoundError:
-                self._training_dataset = make_gemma_dataset(
+                self._training_dataset = make_dataset(
                     self.tokenizer,
                     self.trainer_args.dataset_path,
                     self.trainer_args.dataset_name,
