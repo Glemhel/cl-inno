@@ -1,0 +1,59 @@
+# config.yaml
+
+# NETWORK
+MY_IP: "127.0.0.1"
+BASE_PORT: 36100
+
+# CUDA
+DEVICES:
+  - 1
+  - 3
+  - 5
+
+# WANDB
+EXP_NAME: "GEMMA"
+WANDB_PROJECT_WORKER: "GEMMA-hivemind-trainers"
+WANDB_PROJECT_MONITOR: "GEMMA-hivemind-monitors"
+
+# HF
+MODEL_NAME: "google/gemma-1.1-2b-it"
+USE_PRETRAINED_WEIGHTS: True
+USE_PEFT_AND_QUANTIZATION: False
+HF_USER_ACCESS_TOKEN: "your_hf_user_access_token"
+HF_TOKEN: "your_hf_token"
+
+# TRAINING PARAMETERS
+BATCH_SIZE: 128
+OPTIMIZER: "lamb"
+LEARNING_RATE: 0.005
+
+# PEER SETTINGS
+N_PEERS: 1
+
+# ENVIRONMENT SETTINGS
+ULIMIT: 16384
+
+# ADDITIONAL ARGUMENTS
+COMMON_ARGUMENTS:
+  - "--matchmaking_time=20"
+  - "--per_device_train_batch_size=1"
+  - "--gradient_accumulation_steps=1"
+  - "--average_state_every=4"
+
+# PATHS
+RUN_BASE_TRAINER_PATH: "run_base_trainer.py"
+RUN_AUX_PEER_PATH: "run_aux_peer.py"
+
+# LOGGING
+LOG_DIR: "./logs"
+OUTPUT_DIR_PREFIX: "outputs"
+
+# BANDWIDTH SETTINGS
+SPEEDTEST_JSON: "speedtest.json"
+
+# UTILIZATION SETTINGS
+UTILIZATION_THRESHOLD: 15  # Utilization percentage threshold
+CHECK_INTERVAL: 5  # Interval in seconds to check GPU utilization
+
+# RUN DURATION
+RUN_DURATION: 10  # Duration in hours
