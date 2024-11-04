@@ -5,9 +5,9 @@ pgid=$(ps -o pgid= $$)
 echo "PGID of base process: $pgid"
 
 # NETWORK
-export MY_IP="10.90.122.133"
+export MY_IP=127.0.0.1
 export BASE_PORT=36100
-INITIAL_PEER_ID="/ip4/$MY_IP/tcp/$BASE_PORT/p2p/QmTG8ptqfvadXvSpRPEqtnr2CFhcqQVr5QJaD4Wkc3wGGz"
+INITIAL_PEER_ID="/ip4/$MY_IP/tcp/$BASE_PORT/p2p/QmXmwSiyodXUJwqgjpibkdH3cW8ok5e9cTAamuiq7dnK6o"
 
 # CUDA
 export CUDA_VISIBLE_DEVICES=0 # supports multiple cuda devices!
@@ -19,6 +19,9 @@ export WANDB_PROJECT_MONITOR=$EXP_NAME-hivemind-monitors
 # export WANDB_DISABLED=true
 
 # HF
+export MODEL_NAME=google/gemma-1.1-2b-it
+export USE_PRETRAINED_WEIGHTS=False
+export USE_PEFT_AND_QUANTIZATION=False
 export HF_USER_ACCESS_TOKEN=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
 export HF_TOKEN=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
 
@@ -33,10 +36,11 @@ OPTIMIZER="lamb"
 LR=0.005
 
 export BANDWIDTH=`python -c "import json; speedtest = json.load(open('speedtest.json')); print(int(max(1, min(speedtest['upload'], speedtest['download']) / 1e6)))"`
-export COMMON_ARGUMENTS="--run_id $EXP_NAME --bandwidth $BANDWIDTH --target_batch_size $BATCH_SIZE \
+export COMMON_ARGUMENTS="--model_name $MODEL_NAME --run_id $EXP_NAME --use_pretrained_weights $USE_PRETRAINED_WEIGHTS --use_peft_and_quantization $USE_PEFT_AND_QUANTIZATION \
+    --bandwidth $BANDWIDTH --target_batch_size $BATCH_SIZE \
     --run_name $EXP_NAME --learning_rate $LR --optimizer_str $OPTIMIZER --matchmaking_time=20 \
     --per_device_train_batch_size 1 --gradient_accumulation_steps 1 \
-    --average_state_every 4 --use_local_updates true --reuse_grad_buffers false --delay_grad_averaging false"
+    --average_state_every 4"
 
 echo "Common arguments for peers: $COMMON_ARGUMENTS"
 
@@ -68,6 +72,10 @@ do
 
     if [[ "$i" = "$N_PEERS" ]]; then
         # monitor peer as last
+        if [[ $USE_PRETRAINED_WEIGHTS == "False" ]]; then
+            echo "waiting 45 seconds before start of monitoring"
+            sleep 45
+        fi
         nohup python run_aux_peer.py $ARGUMENTS --monitor \
                  --wandb_project $WANDB_PROJECT_MONITOR  > peer$i.log &
     else

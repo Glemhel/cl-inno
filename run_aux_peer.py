@@ -15,7 +15,7 @@ from arguments import (
     AuxiliaryPeerArguments,
     CollaborativeArguments,
     HFTrainerArguments,
-    BitsAndBitesArguments,
+    BitsAndBytesArguments,
 )
 from tasks.lm.task import LMTrainingTask
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
             AuxiliaryPeerArguments,
             HFTrainerArguments,
             CollaborativeArguments,
-            BitsAndBitesArguments,
+            BitsAndBytesArguments,
         )
     )
     peer_args, trainer_args, collab_args, bnb_args = (

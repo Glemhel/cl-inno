@@ -17,7 +17,8 @@ from arguments import (
     CollaborativeArguments,
     HFTrainerArguments,
     TrainingPeerArguments,
-    BitsAndBitesArguments,
+    BitsAndBytesArguments,
+    LoraArguments,
 )
 from lib.training.hf_trainer import CollaborativeHFTrainer
 from tasks.lm.task import LMTrainingTask
@@ -177,10 +178,11 @@ def main():
             TrainingPeerArguments,
             HFTrainerArguments,
             CollaborativeArguments,
-            BitsAndBitesArguments,
+            BitsAndBytesArguments,
+            LoraArguments,
         )
     )
-    peer_args, trainer_args, collab_args, bnb_args = (
+    peer_args, trainer_args, collab_args, bnb_args, lora_args = (
         parser.parse_args_into_dataclasses()
     )
 
@@ -193,7 +195,7 @@ def main():
         )
 
     utils.setup_logging(trainer_args)
-    task = LMTrainingTask(peer_args, trainer_args, collab_args, bnb_args)
+    task = LMTrainingTask(peer_args, trainer_args, collab_args, bnb_args, lora_args)
     model = task.model.to(trainer_args.device)
 
     assert trainer_args.do_train and not trainer_args.do_eval

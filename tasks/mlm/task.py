@@ -45,7 +45,7 @@ class MLMTrainingTask:
         transformers.set_seed(trainer_args.seed)  # seed used for initialization
 
         self.config = LeanAlbertConfig.from_pretrained(peer_args.model_config_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(peer_args.tokenizer_path, cache_dir=peer_args.cache_dir)
+        self.tokenizer = AutoTokenizer.from_pretrained(trainer_args.tokenizer_path, cache_dir=peer_args.cache_dir)
 
         output_dir = Path(trainer_args.output_dir)
         logger.info(f'Checkpoint dir {output_dir}, contents {list(output_dir.glob("checkpoint*"))}')
