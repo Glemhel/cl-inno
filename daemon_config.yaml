@@ -1,5 +1,3 @@
-# config.yaml
-
 # NETWORK
 MY_IP: "127.0.0.1"
 BASE_PORT: 36100
