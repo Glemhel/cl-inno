@@ -74,6 +74,7 @@ class Daemon:
         os.environ['MODEL_NAME'] = self.config['MODEL_NAME']
         os.environ['USE_PRETRAINED_WEIGHTS'] = str(self.config['USE_PRETRAINED_WEIGHTS'])
         os.environ['USE_PEFT_AND_QUANTIZATION'] = str(self.config['USE_PEFT_AND_QUANTIZATION'])
+        os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 
         hf_user_access_token = self.config.get('HF_USER_ACCESS_TOKEN')
         hf_token = self.config.get('HF_TOKEN')
@@ -187,7 +188,8 @@ class Daemon:
             base_trainer_arguments = [run_base_trainer_path] + arguments
             self.logger.info(f"Starting base trainer peer {i} with command:\npython {' '.join(base_trainer_arguments)}")
             with open(peer_log_file, 'w') as f:
-                process = subprocess.Popen(['python'] + base_trainer_arguments, stdout=f, stderr=subprocess.STDOUT)
+                my_env = os.environ.copy()
+                process = subprocess.Popen(['python'] + base_trainer_arguments, stdout=f, stderr=subprocess.STDOUT, env=my_env)
                 self.processes.append(process)
 
 

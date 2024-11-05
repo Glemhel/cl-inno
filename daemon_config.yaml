@@ -6,9 +6,7 @@ BASE_PORT: 36100
 
 # CUDA
 DEVICES:
-  - 1
   - 3
-  - 5
 
 # WANDB
 EXP_NAME: "GEMMA"
