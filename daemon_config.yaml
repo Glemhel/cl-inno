@@ -55,5 +55,5 @@ SPEEDTEST_JSON: "speedtest.json"
 UTILIZATION_THRESHOLD: 15  # Utilization percentage threshold
 CHECK_INTERVAL: 5  # Interval in seconds to check GPU utilization
 
-# RUN DURATION
-RUN_DURATION: 10  # Duration in hours
+# TRAIN DURATION (hours)
+RUN_DURATION: 10
