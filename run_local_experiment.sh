@@ -20,7 +20,7 @@ export WANDB_PROJECT_MONITOR=$EXP_NAME-hivemind-monitors
 
 # HF
 export MODEL_NAME=google/gemma-1.1-2b-it
-export USE_PRETRAINED_WEIGHTS=False
+export USE_PRETRAINED_WEIGHTS=True
 export USE_PEFT_AND_QUANTIZATION=False
 export HF_USER_ACCESS_TOKEN=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
 export HF_TOKEN=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
