@@ -130,7 +130,7 @@ class CollaborativeArguments:
         metadata={"help": "Whether or not to run gradient averaging in background"},
     )
     average_state_every: int = field(
-        default=5, metadata={"help": "Average parameters every this many epochs"}
+        default=1, metadata={"help": "Average parameters every this many epochs"}
     )
     reuse_grad_buffers: bool = field(
         default=True,
@@ -231,7 +231,7 @@ class HFTrainerArguments(TrainingArguments):
         '''
         Returns path to tokenized dataset
         '''
-        return "_".join(["data/tokenized", *(self.model_name.lower().split('/')), *(self.dataset_name.lower().split('/'))])
+        return "_".join(["data/tokenized", *(self.model_name.lower().split('/')), *(self.dataset_path.lower().split('/')), *(self.dataset_name.lower().split('/'))])
     @property
     def tokenizer_path(self) -> str: 
         '''

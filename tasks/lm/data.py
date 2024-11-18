@@ -7,7 +7,7 @@ from typing import List, Optional, Union
 
 import nltk
 import torch.utils.data
-from datasets import interleave_datasets, load_dataset
+from datasets import interleave_datasets, load_dataset, concatenate_datasets, DatasetDict
 from prefetch_generator import BackgroundGenerator
 import multiprocessing as mp
 import multiprocessing.sharedctypes
@@ -154,6 +154,27 @@ def make_dataset(tokenizer, dataset_path, dataset_name, path_to_tokenized_datase
     def tokenize_function(examples):
         return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=max_sequence_length)
     
+    tokenized_datasets = dataset.map(tokenize_function, batched=True)
+    tokenized_datasets.save_to_disk(path_to_tokenized_dataset)
+
+def make_dataset_wiki_stories(tokenizer, path_to_tokenized_dataset, max_sequence_length=512):
+    dataset1_train = load_dataset('wikitext', 'wikitext-103-raw-v1', split='train')
+    dataset2_train = load_dataset('roneneldan/TinyStories', split='train')
+
+    dataset1_valid = load_dataset('wikitext', 'wikitext-103-raw-v1', split='validation')
+    dataset2_valid = load_dataset('roneneldan/TinyStories', split='validation')
+
+    dataset_train = concatenate_datasets([dataset1_train, dataset2_train])
+    dataset_valid = concatenate_datasets([dataset1_valid, dataset2_valid])
+
+    dataset = DatasetDict({
+        'train': dataset_train,
+        'validation': dataset_valid
+    })
+
+    def tokenize_function(examples):
+        return tokenizer(examples['text'], truncation=True, padding="max_length", max_length=max_sequence_length)
+
     tokenized_datasets = dataset.map(tokenize_function, batched=True)
     tokenized_datasets.save_to_disk(path_to_tokenized_dataset)
 

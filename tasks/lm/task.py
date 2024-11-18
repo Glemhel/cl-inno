@@ -34,7 +34,7 @@ from lib.training.lamb import Lamb
 import multiprocessing as mp
 
 from .base_data import make_training_dataset
-from .data import make_dataset
+from .data import make_dataset, make_dataset_wiki_stories
 
 hivemind.use_hivemind_log_handler("in_root_logger")
 logger = hivemind.get_logger()
@@ -261,17 +261,16 @@ class LMTrainingTask:
         #     )
         # return self._training_dataset
         if self._training_dataset is None:
+            tokenized_path = 'data/tokenized_wikitext_tinystories'
             try:
-                self._training_dataset = load_from_disk(self.trainer_args.tokenized_dataset_path)
+                self._training_dataset = load_from_disk(tokenized_path)
             except FileNotFoundError:
-                self._training_dataset = make_dataset(
+                self._training_dataset = make_dataset_wiki_stories(
                     self.tokenizer,
-                    self.trainer_args.dataset_path,
-                    self.trainer_args.dataset_name,
-                    self.trainer_args.tokenized_dataset_path,
+                    tokenized_path,
                     max_sequence_length=self.trainer_args.max_sequence_length,
                 )
-                self._training_dataset = load_from_disk(self.trainer_args.tokenized_dataset_path)
+                self._training_dataset = load_from_disk(tokenized_path)
         return self._training_dataset
 
     @property
