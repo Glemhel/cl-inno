@@ -19,45 +19,54 @@ WIP: not tested for several clients now. Only one local client for Gemma+LoRA
 # Experiments
 
 We conducted several experiments to evaluate the performance of different setups using three server configurations:  
-- **Yandex Cloud Server**: Tesla T4 (16GB)  
-- **MFTI Server**: A100 (40GB)  
-- **Innopolis Server**: 4090 (24GB)
+- **Yandex Cloud Server**: NVIDIA Tesla T4 (16GB)  
+- **MFTI Server**: NVIDIA Tesla A100 (40GB)  
+- **Innopolis Server**: NVIDIA GeForce RTX 4090 (24GB)
 
 ---
 
 ## Experiment 1: Single Peer vs. Two Peers
 
-This experiment evaluates the performance of training a pretrained, quantized Gemma 2B model with LoRA on the Wikitext dataset using one peer (on either server) versus two peers (one peer per server).  
+This experiment evaluates the performance of training a pretrained, quantized Gemma 2B model with LoRA on the Wikitext dataset using one peer (on either server) versus two peers (one peer per server) for the first 200 training epochs.  
 
 **Setup**:  
 - Dataset: Wikitext  
-- Model: Pretrained, quantized Gemma 2B with LoRA  
+- Model: Pretrained, quantized Gemma 2B with LoRA
+- Number of epochs: 200
+- Target batch size: 128 (Total number of samples peers collectively process before averaging weights and begining the next epoch)
 - Configurations:  
   - Single Peer: Tested on Yandex and MFTI servers  
   - Two Peers: One peer on each server  
 
 **Results**:  
-The chart below plots validation loss (y-axis) for the first 200 training steps versus time (x-axis):  
+The chart below plots validation loss (y-axis) for the first 200 training epochs versus time (x-axis):  
 
 ![Validation Loss - Single Peer vs. Two Peers](https://github.com/user-attachments/assets/ce465de2-8563-46f6-99ea-79123cbe247e)
 
-Training with two peers demonstrated slightly lower validation loss compared to training with a single peer.  
+Training with two peers demonstrated slightly lower validation loss compared to training with a single peer. Moreover, the total time to reach 200 epochs was also lower for training with two peers, as seen in the chart below that plots time (y-axis) between epochs (x-axis):
+
+![Delta Time - Single Peer vs. Two Peers](https://github.com/user-attachments/assets/16c720d2-9428-4aa8-bc74-9a6d31eb7e8a)
 
 ---
 
-## Experiment 2: Batch Size Effects
+## Experiment 2: Per Device Train Batch Size Effects
 
-This experiment evaluates how batch size impacts validation loss and time to convergence on the same Wikitext task.  
+This experiment evaluates how per device train batch size impacts validation loss and time to convergence on the same Wikitext task.
+Note: 
+- **Per device train batch size** is the size of micro-batch that each GPU processes in a single optimizer step.
+- **Target batch size** is the total number of samples peers collectively process before averaging weights and begining the next epoch.
 
 **Setup**:  
 - Dataset: Wikitext  
-- Model: Pretrained, quantized Gemma 2B with LoRA 
+- Model: Pretrained, quantized Gemma 2B with LoRA
+- Number of epochs: 200
+- Target batch size: 128
 - Configurations:   
-  - Batch Size: 1 and 4 (single peer on Yandex server)
-  - Batch Size: 1, 4, and 8 (single peer on Innopolis server)
+  - Per Device Train Batch Size: 1 and 4 (single peer on Yandex server)
+  - Per Device Train Batch Size: 1, 4, and 8 (single peer on Innopolis server)
 
 **Results**:  
-The chart below shows validation loss (y-axis) for the first 200 training steps versus time (x-axis) using batch sizes of 1 and 4 on the Yandex server:  
+The chart below shows validation loss (y-axis) for the first 200 training epochs versus time (x-axis) using batch sizes of 1 and 4 on the Yandex server:  
 
 ![Validation Loss - Batch Sizes 1 vs. 4](https://github.com/user-attachments/assets/b7ce048d-169c-4d87-be2d-ea2d7a026e5a)
 
@@ -65,10 +74,10 @@ Additional tests on a Innopolis server with batch sizes of 1, 4, and 8 show simi
 
 ![Validation Loss - Batch Sizes 1, 4, 8 on Innopolis server](https://github.com/user-attachments/assets/0a38861a-d985-45e9-8010-72746a608d28)
  
-- Contrary to expectations, larger batch sizes (e.g., 4 and 8) showed slower convergence compared to a batch size of 1.  
+- Contrary to expectations, larger per_device_train_batch_size (e.g., 4 and 8) showed slower convergence compared to a per_device_train_batch_size of 1.  
 - These results suggest a potential issue in either the **Hivemind library** or the training code itself.  
 
-Until the root cause is identified, we recommend using a batch size of 1 for all experiments.  
+Until the root cause is identified, we recommend using a per_device_train_batch_size of 1 for all experiments.   
 
 ---
 
