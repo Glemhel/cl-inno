@@ -38,13 +38,18 @@ This experiment evaluates the performance of training a pretrained, quantized Ge
 **Results**:  
 The chart below plots validation loss (y-axis) for the first 200 training epochs versus time (x-axis):  
 
-![Validation Loss - Single Peer vs. Two Peers](https://github.com/user-attachments/assets/ce465de2-8563-46f6-99ea-79123cbe247e)
+
+<figure>
+  <img src="https://github.com/user-attachments/assets/ce465de2-8563-46f6-99ea-79123cbe247e" alt="Validation loss" width="550">
+</figure>
 
 Training with two peers demonstrated slightly lower validation loss compared to training with a single peer.
 
 Moreover, the total time to reach 200 epochs was also lower for training with two peers, as seen in the chart below that plots time (y-axis) between epochs (x-axis):
 
-![Delta Time - Single Peer vs. Two Peers](https://github.com/user-attachments/assets/16c720d2-9428-4aa8-bc74-9a6d31eb7e8a)
+<figure>
+  <img src="https://github.com/user-attachments/assets/16c720d2-9428-4aa8-bc74-9a6d31eb7e8a" alt="Epoch time" width="550">
+</figure>
 
 ---
 
@@ -67,11 +72,15 @@ Note:
 **Results**:  
 The chart below shows validation loss (y-axis) for the first 200 training epochs versus time (x-axis) using batch sizes of 1 and 4 on the Yandex server:  
 
-![Validation Loss - Batch Sizes 1 vs. 4](https://github.com/user-attachments/assets/b7ce048d-169c-4d87-be2d-ea2d7a026e5a)
+<figure>
+  <img src="https://github.com/user-attachments/assets/b7ce048d-169c-4d87-be2d-ea2d7a026e5a" alt="Validation Loss - Batch Sizes 1 vs. 4" width="550">
+</figure>
 
 Additional tests on a Innopolis server with batch sizes of 1, 4, and 8 show similar results:  
 
-![Validation Loss - Batch Sizes 1, 4, 8 on Innopolis server](https://github.com/user-attachments/assets/0a38861a-d985-45e9-8010-72746a608d28)
+<figure>
+  <img src="https://github.com/user-attachments/assets/0a38861a-d985-45e9-8010-72746a608d28" alt="Validation Loss - Batch Sizes 1, 4, 8 on Innopolis server" width="550">
+</figure>
  
 - Contrary to expectations, larger per_device_train_batch_size (e.g., 4 and 8) showed slower convergence compared to a per_device_train_batch_size of 1.  
 - These results suggest a potential issue in either the **Hivemind library** or the training code itself.  
