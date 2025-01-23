@@ -19,7 +19,7 @@ We implement a Python-based framework leveraging the [Hivemind collaborative tra
 We conducted several experiments to evaluate the performance of different setups using three server configurations:  
 - **Yandex Cloud Server**: NVIDIA Tesla T4 (16GB)  
 - **MIPT Server**: NVIDIA Tesla A100 (40GB)  
-- **Innopolis Server**: NVIDIA GeForce RTX 4090 (24GB)
+- **Innopolis University Server**: NVIDIA GeForce RTX 4090 (24GB)
 
 ---
 
