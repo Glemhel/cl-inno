@@ -8,7 +8,7 @@ We implement a Python-based framework leveraging the [Hivemind collaborative tra
 - Compression and quantization of gradient communication for reduced data transfer overhead;
 
 ## Future Plans:
-- Add advanced algorithms of compression and quantizatin of gradients communication;
+- Add advanced algorithms of compressions and quantizations of gradients communication;
 - Expand support for additional models and datasets;
 - Containerize training with Docker and automate training initialization on all connected devices;
 - Potential integration of theoretical resource balancing methods for optimal workload distribution;
