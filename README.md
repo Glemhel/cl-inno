@@ -90,6 +90,7 @@ Until the root cause is identified, we recommend using a per_device_train_batch_
 ---
 
 # Running experiments locally
+Please follow [this instruction](Instruction.md)
 
 ## Using pipenv
 
