@@ -4,20 +4,21 @@ We implement a Python-based framework leveraging the [Hivemind collaborative tra
 ## Features:
 - Support for multiple optimizers, including large batch-size friendly optimizers;
 - Fine-tuning with LoRA PEFT and training on diverse datasets and models;
-- Built-in scripts for automatic startup and synchronization.
+- Built-in scripts for automatic startup and synchronization;
+- Compression and quantization of gradient communication for reduced data transfer overhead;
 
 ## Future Plans:
-- Add compression for gradient communication to reduce data transfer overhead;
+- Add advanced algorithms of compression and quantizatin of gradients communication;
 - Expand support for additional models and datasets;
 - Containerize training with Docker and automate training initialization on all connected devices;
-- Potential integration of theoretical resource balancing methods for optimal workload distribution.
+- Potential integration of theoretical resource balancing methods for optimal workload distribution;
 
 
 # Experiments & Results
 
 We conducted several experiments to evaluate the performance of different setups using three server configurations:  
 - **Yandex Cloud Server**: NVIDIA Tesla T4 (16GB)  
-- **MFTI Server**: NVIDIA Tesla A100 (40GB)  
+- **MIPT Server**: NVIDIA Tesla A100 (40GB)  
 - **Innopolis Server**: NVIDIA GeForce RTX 4090 (24GB)
 
 ---
