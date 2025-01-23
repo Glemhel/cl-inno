@@ -1,22 +1,19 @@
-# Collaborative Compressed Training of SOTA LLMs
+# Collaborative Training of SOTA LLMs on Heterogenous devices
+We implement a Python-based framework leveraging the [Hivemind collaborative training library](https://github.com/learning-at-home/hivemind/) to enable distributed training and fine-tuning of modern neural networks, particularly LLMs, across heterogeneous devices.
 
-Run with `run_base_trainer.py`.
+## Features:
+- Support for multiple optimizers, including large batch-size friendly optimizers;
+- Fine-tuning with LoRA PEFT and training on diverse datasets and models;
+- Built-in scripts for automatic startup and synchronization.
 
-Training task & models are defined in `tasks/lm/task.py`.
+## Future Plans:
+- Add compression for gradient communication to reduce data transfer overhead;
+- Expand support for additional models and datasets;
+- Containerize training with Docker and automate training initialization on all connected devices;
+- Potential integration of theoretical resource balancing methods for optimal workload distribution.
 
-WIP: not tested for several clients now. Only one local client for Gemma+LoRA
 
-## Using pipenv
-
-1. Install dependencies with `pipenv install`.
-
-2. Install hivemind:
-    - default installation: `pipenv install hivemind`
-    - custom installation: `pipenv shell`, `pip install git+<custom_hivemind_github>`
-  
----
-
-# Experiments
+# Experiments & Results
 
 We conducted several experiments to evaluate the performance of different setups using three server configurations:  
 - **Yandex Cloud Server**: NVIDIA Tesla T4 (16GB)  
@@ -43,7 +40,9 @@ The chart below plots validation loss (y-axis) for the first 200 training epochs
 
 ![Validation Loss - Single Peer vs. Two Peers](https://github.com/user-attachments/assets/ce465de2-8563-46f6-99ea-79123cbe247e)
 
-Training with two peers demonstrated slightly lower validation loss compared to training with a single peer. Moreover, the total time to reach 200 epochs was also lower for training with two peers, as seen in the chart below that plots time (y-axis) between epochs (x-axis):
+Training with two peers demonstrated slightly lower validation loss compared to training with a single peer.
+
+Moreover, the total time to reach 200 epochs was also lower for training with two peers, as seen in the chart below that plots time (y-axis) between epochs (x-axis):
 
 ![Delta Time - Single Peer vs. Two Peers](https://github.com/user-attachments/assets/16c720d2-9428-4aa8-bc74-9a6d31eb7e8a)
 
@@ -82,6 +81,16 @@ Until the root cause is identified, we recommend using a per_device_train_batch_
 ---
 
 # Running experiments locally
+
+## Using pipenv
+
+1. Install dependencies with `pipenv install`.
+
+2. Install hivemind:
+    - default installation: `pipenv install hivemind`
+    - custom installation: `pipenv shell`, `pip install git+<custom_hivemind_github>`
+  
+---
 For easier local convergence testing runs, `run_local_experiment.sh` is implemented. The script contains all main setups for peers, runs them in background with the same settings.
 
 Important settings:
