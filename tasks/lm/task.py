@@ -39,6 +39,58 @@ from .data import make_dataset
 hivemind.use_hivemind_log_handler("in_root_logger")
 logger = hivemind.get_logger()
 
+class EF21Compression:
+    def __init__(self, base_compression, param_shapes):
+        """
+        Initialize EF21 with a base compression scheme and parameter shapes.
+        Args:
+            base_compression: The underlying compression algorithm (e.g., Float16, Uniform8Bit).
+            param_shapes: A dictionary mapping parameter names to their shapes.
+        """
+        self.base_compression = base_compression
+        self.errors = {param_name: torch.zeros(shape, device='cpu') for param_name, shape in param_shapes.items()}
+
+    def compress(self, gradients, param_names):
+        """
+        Apply EF21 compression with error feedback.
+        Args:
+            gradients: A dictionary of parameter gradients.
+            param_names: The names of the parameters corresponding to the gradients.
+        Returns:
+            compressed_gradients: A dictionary of compressed gradients.
+        """
+        compressed_gradients = {}
+        for name in param_names:
+            gradient = gradients[name]
+            error = self.errors[name]
+
+            # Add error feedback to gradient
+            adjusted_gradient = gradient + error
+
+            # Apply base compression
+            compressed_gradient = self.base_compression.compress(adjusted_gradient)
+            compressed_gradients[name] = compressed_gradient
+
+            # Update error vector
+            decompressed_gradient = self.base_compression.decompress(compressed_gradient)
+            self.errors[name] = adjusted_gradient - decompressed_gradient
+
+        return compressed_gradients
+
+    def decompress(self, compressed_gradients, param_names):
+        """
+        Decompress the gradients.
+        Args:
+            compressed_gradients: A dictionary of compressed gradients.
+            param_names: The names of the parameters corresponding to the gradients.
+        Returns:
+            decompressed_gradients: A dictionary of decompressed gradients.
+        """
+        decompressed_gradients = {}
+        for name in param_names:
+            decompressed_gradients[name] = self.base_compression.decompress(compressed_gradients[name])
+        return decompressed_gradients
+
 
 class LMTrainingTask:
     """A container for training config, model, tokenizer, optimizer, and other local training utilities"""
@@ -227,13 +279,18 @@ class LMTrainingTask:
             print('---')
             print(asdict(self.collab_args))
             print('---')
+            param_shapes = {name: param.shape for name, param in self.model.named_parameters()}
+            ef21_compression = EF21Compression(
+                base_compression=Uniform8BitQuantization(),  
+                param_shapes=param_shapes
+            )
             self._collaborative_optimizer = hivemind.Optimizer(
                 dht=self.dht,
                 params=self._make_param_groups(),
                 run_id=self.peer_args.run_id,
                 optimizer=self._make_optimizer,
                 scheduler=self._make_scheduler,
-                grad_compression=averaging_compression,
+                grad_compression=ef21_compression,
                 state_averaging_compression=averaging_compression,
                 batch_size_per_step=(
                     self.trainer_args.batch_size_per_step
